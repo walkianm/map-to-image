@@ -2,6 +2,7 @@ var fs = require('fs');
 var nbt = require('nbt');
 var png = require('pngjs').PNG;
 
+// stores the corresponding rgba values for all map color codes
 colorTranslations = {
     0: [255,255, 255, 255],
     1: [0, 0, 0, 0],
@@ -214,35 +215,38 @@ colorTranslations = {
 }
 
 fs.readdir("maps", function(err, files) {
-    // read all files in the maps folder
-    // console.log(files);
+    // Get all files from the relative maps folder
     for (file of files) {
-        // console.log(file);
         const name = file;
         var data = fs.readFileSync('maps/' + name);
+        // get the nbt data
         nbt.parse(data, function(error, data) {
             if (error) { console.log(error); }
 
-            // console.log(data.value.data.value.colors.value.length);
+            var colorData = data.value.data.value.colors.value;
 
+            // prepare output image
             var img = new png({
                 width: 128,
                 height: 128,
             });
 
-            var colorData = data.value.data.value.colors.value;
-
+            // for each pixel on the map...
             for (var i = 0; i < colorData.length; i++) {
+                // handles negatives (should be read as unsigned int)
                 if (colorData[i] < 0) {
                     colorData[i] += 256;
                 }
+                // decode the map data into rgba (from the mc wiki)
                 color = colorTranslations[colorData[i]];
+                // then set the corresponding pixel in the image
                 img.data[i * 4] = color[0];
                 img.data[i * 4 + 1] = color[1];
                 img.data[i * 4 + 2] = color[2];
                 img.data[i * 4 + 3] = color[3];
             }
-            // console.log(name);
+
+            // write image to file
             img.pack().pipe(fs.createWriteStream('images/' + name.slice(0, -4) + ".png"));
         });
     }
